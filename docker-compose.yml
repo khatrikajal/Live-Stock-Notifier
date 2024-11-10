@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app  # Bind mount for live code updates
+      - ./backend/db.sqlite3:/app/db.sqlite3  # Persistent storage for SQLite database file
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=stock_notifier.settings  # Ensure the correct settings module
+
+  # frontend:
+  #   build:
+  #     context: ./frontend/web_stock_notifier
+  #   volumes:
+  #     - ./frontend/web_stock_notifier:/app  # Bind mount for live code updates
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - CHOKIDAR_USEPOLLING=true  # Optional: For hot-reloading in certain environments
