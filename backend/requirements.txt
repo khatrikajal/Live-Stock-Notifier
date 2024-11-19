@@ -23,6 +23,7 @@ django-timezone-field==7.0
 djangorestframework==3.15.2
 fake-useragent==1.5.1
 feedparser==6.0.11
+finnhub-python==2.4.21
 html5lib==1.1
 idna==3.10
 importlib_metadata==8.5.0
@@ -41,6 +42,7 @@ pyquery==2.0.1
 python-crontab==3.2.0
 python-dateutil==2.9.0.post0
 pytz==2024.2
+redis==5.2.0
 requests==2.32.3
 requests-html==0.10.0
 sgmllib3k==1.0.0
@@ -56,5 +58,5 @@ w3lib==2.2.1
 wcwidth==0.2.13
 webencodings==0.5.1
 websockets==10.4
-yahoo-fin==0.8.9.1
+
 zipp==3.21.0

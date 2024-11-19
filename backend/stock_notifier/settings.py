@@ -53,7 +53,7 @@ INSTALLED_APPS = [
     "live_stock_app",
     'django_celery_results',
     'django_celery_beat',
-    #  'channels'
+     'channels'
 ]
 
 MIDDLEWARE = [
@@ -85,7 +85,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "stock_notifier.wsgi.application"
-# ASGI_APPLICATION = "stock_notifier.asgi.application"
+ASGI_APPLICATION = 'stock_notifier.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -158,7 +158,9 @@ EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
 
 
 # Celery Settings
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
+# settings.py (or celery.py)
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Ensure it matches this if Redis is running on localhost and default port
+
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
@@ -167,12 +169,22 @@ CELERY_RESULT_BACKEND = 'django-db'
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# Channels Layer with Redis
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [("127.0.0.1", 6379)],  # Ensure Redis is running locally
+        },
+    },
+}
 
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [('127.0.0.1', 6379)],
-#         },
-#     },
-# }
+# Finnhub API settings from environment variables
+FINNHUB_API_KEY = env('FINNHUB_API_KEY')  # Store in .env file
+BASE_URL = 'https://api.finnhub.io'  # Finnhub API base URL for REST requests
+
+# WebSocket URL for Finnhub
+FINNHUB_WS_URL = f"wss://ws.finnhub.io?token={FINNHUB_API_KEY}"
+
+# Example of storing ALLOWED_HOSTS in the environment for better security
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])

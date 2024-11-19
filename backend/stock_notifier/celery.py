@@ -1,26 +1,34 @@
+# celery.py
+
 from __future__ import absolute_import, unicode_literals
 import os
-
 from celery import Celery
+from datetime import timedelta
 from django.conf import settings
-#from celery.schedules import crontab
 
+# Set the Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stock_notifier.settings')
 
+# Initialize the Celery application
 app = Celery('stock_notifier')
-app.conf.enable_utc = False
-app.conf.update(timezone = 'Asia/Kolkata')
 
+# Celery configuration settings
+app.conf.enable_utc = False
+app.conf.update(timezone='Asia/Kolkata')
+
+# Load configuration from Django settings
 app.config_from_object(settings, namespace='CELERY')
 
+# Celery beat schedule to run the task every 10 seconds
 app.conf.beat_schedule = {
-    'every-10-seconds' : {
-        'task': 'live_stock_app.tasks.update_stock',
-        'schedule': 10,
-        'args': (['RELIANCE.NS', 'BAJAJFINSV.NS'],)
+    'fetch_stock_periodically': {
+        'task': 'live_stock_app.tasks.fetch_stock_data',  # Your task to fetch stock data
+        'schedule': timedelta(seconds=10),  # Fetch stock data every 10 seconds
+        'args': ('AAPL',)  # Example stock ticker, can be a list of tickers
     },
 }
 
+# Autodiscover tasks in registered apps
 app.autodiscover_tasks()
 
 @app.task(bind=True)
