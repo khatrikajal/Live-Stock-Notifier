@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Stock Data...</h1>
+
+<!-- if else check data is present or not -->
+{% if stock_symbols %}
+<h1>Hare is Data</h1>
+
+{% for data in stock_symbols %}
+<h5>
+    {{ data.symbol }}
+</h5>
+{% endfor %}
+
+
+
+{% else %}
+<h1>
+    Their is no data
+</h1>
+
+{% endif %}
+
+
+{% endblock %}

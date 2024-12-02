@@ -1,4 +1,4 @@
-from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer # type: ignore
 import json
 
 class StockConsumer(AsyncWebsocketConsumer):

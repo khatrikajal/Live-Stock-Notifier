@@ -1,5 +1,3 @@
-# live_stock_app/tasks.py
-
 import finnhub
 from celery import shared_task
 from django.conf import settings  # Import settings to access the environment variables
