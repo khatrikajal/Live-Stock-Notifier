@@ -1,4 +1,4 @@
-import finnhub
+import finnhub # type: ignore
 from celery import shared_task
 from django.conf import settings  # Import settings to access the environment variables
 

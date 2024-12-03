@@ -4,24 +4,27 @@
 
 <h1>Stock Data...</h1>
 
-<!-- if else check data is present or not -->
 {% if stock_symbols %}
-<h1>Hare is Data</h1>
+<h1>Here is the Data</h1>
 
 {% for data in stock_symbols %}
 <h5>
-    {{ data.symbol }}
+    Symbol: {{ data.symbol }}
+
+    <p>Currency: {{ data.currency }}</p>
+    <p>Description: {{ data.description }}</p>
+    <p>Type: {{ data.type }}</p>
+    <p>Current Price: ${{ data.c }}</p>
+    <p>High Price (Today): ${{ data.h }}</p>
+    <p>Low Price (Today): ${{ data.l }}</p>
+    <p>Change (Down %): {{ data.dp }}%</p>
+    <p>Previous Close: ${{ data.pc }}</p>
+    <hr>
 </h5>
 {% endfor %}
 
-
-
 {% else %}
-<h1>
-    Their is no data
-</h1>
-
+<h1>There is no data</h1>
 {% endif %}
-
 
 {% endblock %}

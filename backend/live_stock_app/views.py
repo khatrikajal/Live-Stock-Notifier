@@ -1,31 +1,45 @@
 from django.shortcuts import render
-import finnhub
+import finnhub  # type: ignore
 from django.conf import settings
-
-
 
 # Initialize Finnhub client with API key from settings
 finnhub_client = finnhub.Client(api_key=settings.FINNHUB_API_KEY)
-
 
 def home(request):
     return render(request, 'base.html')
 
 def fetch_stock_data(request):
-    # Define the country or exchange where you want to fetch symbols (example: 'US' for United States)
     country = 'US'
-    
-    # Fetch stock symbols from Finnhub
+    context = {}
+
     try:
         stock_symbols = finnhub_client.stock_symbols(country)
-        print("Stock symbols for country:", country)
-        print(stock_symbols.symbol)
-        context = {
-            'stock_symbols': stock_symbols
-        }
-    except Exception as e:
-        print(f"Error fetching stock symbols: {e}")
-        stock_symbols = {'error': str(e)}
+        stock_data_with_prices = []
 
-    # Return the fetched stock data as JSON response
+        # Fetch stock prices for each symbol
+        for stock in stock_symbols[:10]:  # Limit for performance
+            try:
+                stock_price = finnhub_client.quote(stock['symbol'])
+                
+                # Add stock price details to the stock data dictionary
+                stock_data = {
+                    'symbol': stock['symbol'],
+                    'currency': stock.get('currency', 'N/A'),
+                    'description': stock.get('description', 'No Description'),
+                    'type': stock.get('type', 'N/A'),
+                    'c': stock_price['c'],  # Current price
+                    'h': stock_price['h'],  # High price
+                    'l': stock_price['l'],  # Low price
+                    'dp': stock_price['dp'],  # Down percentage
+                    'pc': stock_price['pc'],  # Previous close
+                }
+                stock_data_with_prices.append(stock_data)
+            except Exception as e:
+                print(f"Error fetching price for {stock['symbol']}: {e}")
+        
+        context['stock_symbols'] = stock_data_with_prices
+
+    except Exception as e:
+        context['error'] = f"Error fetching stock data: {e}"
+
     return render(request, 'stock_data.html', context)
