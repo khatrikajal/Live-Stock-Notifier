@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">Select Stock Symbols</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="stockSymbols" class="form-label">Available Stock Symbols:</label>
+            <select class="form-select" id="stockSymbols" name="stock_symbols" multiple data-live-search="true">
+                {% if stock_symbols %}
+                {% for symbol in stock_symbols %}
+                <option value="{{ symbol.symbol }}">{{ symbol.description }}</option>
+                {% endfor %}
+                {% else %}
+                <option disabled>No symbols available</option>
+                {% endif %}
+            </select>
+        </div>
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
+
+    {% if error %}
+    <div class="alert alert-danger mt-4 text-center">
+        {{ error }}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#stockSymbols').selectpicker({
+            liveSearch: true,
+            style: 'btn-light',
+            size: 5 // Number of items displayed before scrolling
+        });
+    });
+</script>
+
+{% endblock %}

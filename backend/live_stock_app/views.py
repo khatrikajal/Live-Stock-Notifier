@@ -8,16 +8,38 @@ finnhub_client = finnhub.Client(api_key=settings.FINNHUB_API_KEY)
 def home(request):
     return render(request, 'base.html')
 
+def select_symbols(request):
+    country = 'US'
+    context = {}
+    try:
+        # Fetch the list of available symbols
+        symbols = finnhub_client.stock_symbols(country)
+        stock_symbols = []
+
+        for symbol in symbols:
+            stock_symbols.append({
+                'symbol': symbol['symbol'],
+                'description': symbol['description']
+            })  # Add both symbol and description to the list
+
+        context['stock_symbols'] = stock_symbols  # Pass the list of dictionaries to the template
+
+    except Exception as e:
+        context['error'] = f"Error fetching stock Symbols data: {e}"
+
+    return render(request, 'select_symbols.html', context)
+
+
 def fetch_stock_data(request):
     country = 'US'
     context = {}
 
     try:
         stock_symbols = finnhub_client.stock_symbols(country)
-        stock_data_with_prices = []
+        stock_data_with_prices = [] # Creating empty list
 
         # Fetch stock prices for each symbol
-        for stock in stock_symbols[:10]:  # Limit for performance
+        for stock in stock_symbols:  # Limit for performance
             try:
                 stock_price = finnhub_client.quote(stock['symbol'])
                 
