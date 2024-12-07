@@ -1,45 +1,96 @@
-from channels.generic.websocket import AsyncWebsocketConsumer # type: ignore
 import json
+from channels.generic.websocket import AsyncWebsocketConsumer # type: ignore
+from urllib.parse import parse_qs
+from asgiref.sync import sync_to_async
+from django_celery_beat.models import PeriodicTask, IntervalSchedule # type: ignore
+from finnhub import Client as FinnhubClient # type: ignore
+from django.conf import settings
+from .models import StockDetail
+
 
 class StockConsumer(AsyncWebsocketConsumer):
+    finnhub_client = FinnhubClient(api_key=settings.FINNHUB_API_KEY)
+
+    @sync_to_async
+    def add_to_celery_beat(self, stockpicker):
+        task = PeriodicTask.objects.filter(name="every-10-seconds").first()
+        if task:
+            args = json.loads(task.args)[0]
+            for stock in stockpicker:
+                if stock not in args:
+                    args.append(stock)
+            task.args = json.dumps([args])
+            task.save()
+        else:
+            schedule, _ = IntervalSchedule.objects.get_or_create(every=10, period=IntervalSchedule.SECONDS)
+            PeriodicTask.objects.create(
+                interval=schedule,
+                name='every-10-seconds',
+                task="live_stock_app.tasks.update_stock",
+                args=json.dumps([stockpicker])
+            )
+
+    @sync_to_async
+    def add_to_stock_detail(self, stockpicker):
+        user = self.scope["user"]
+        for stock in stockpicker:
+            stock_detail, _ = StockDetail.objects.get_or_create(stock=stock)
+            stock_detail.user.add(user)
+
     async def connect(self):
-        self.group_name = "stock_track"  # Group name for stock updates
+        self.room_name = self.scope['url_route']['kwargs']['room_name']
+        self.room_group_name = f'stock_{self.room_name}'
 
-        # Join the stock tracking group
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
+        # Join room group
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
-        # Accept the WebSocket connection
+        # Parse query_string
+        query_params = parse_qs(self.scope["query_string"].decode())
+        stockpicker = query_params.get('stockpicker', [])
+
+        # Add to celery beat and stock details
+        await self.add_to_celery_beat(stockpicker)
+        await self.add_to_stock_detail(stockpicker)
+
         await self.accept()
 
+    @sync_to_async
+    def cleanup_user_stocks(self):
+        user = self.scope["user"]
+        user_stocks = StockDetail.objects.filter(user=user)
+        task = PeriodicTask.objects.filter(name="every-10-seconds").first()
+        args = json.loads(task.args)[0] if task else []
+
+        for stock in user_stocks:
+            stock.user.remove(user)
+            if stock.user.count() == 0:
+                args.remove(stock.stock)
+                stock.delete()
+
+        if task:
+            if not args:
+                task.delete()
+            else:
+                task.args = json.dumps([args])
+                task.save()
+
     async def disconnect(self, close_code):
-        # Leave the stock tracking group on disconnect
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        await self.cleanup_user_stocks()
 
-    async def receive(self, text_data):
-        # Here you can handle messages like subscribing or unsubscribing to specific stock tickers
-        # data = json.loads(text_data)
-        # action = data.get('action')
-        # ticker = data.get('ticker')
+        # Leave room group
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
-        # Example of subscribing to a stock ticker
-        # if action == 'subscribe' and ticker:
-        #     # Handle subscription logic (e.g., maintaining a list of tickers the client is interested in)
-        #     pass
+    @sync_to_async
+    def get_user_stocks(self):
+        user = self.scope["user"]
+        return list(user.stockdetail_set.values_list('stock', flat=True))
 
-        # Example of unsubscribing from a stock ticker
-        # elif action == 'unsubscribe' and ticker:
-        #     # Handle unsubscription logic
-        #     pass
-
-        pass  # You can customize this as per your needs
-
-    # Receive message from the Celery task
     async def send_stock_update(self, event):
-        # Send the stock data received from the Celery task to WebSocket clients
-        await self.send(text_data=json.dumps(event['message']))
+        message = event['message']
+        user_stocks = await self.get_user_stocks()
+
+        # Filter stock data for the user
+        filtered_data = {stock: data for stock, data in message.items() if stock in user_stocks}
+
+        # Send filtered data to WebSocket
+        await self.send(text_data=json.dumps(filtered_data))

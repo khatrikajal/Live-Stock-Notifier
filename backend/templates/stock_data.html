@@ -1,30 +1,138 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+<style>
+    .red {
+        color: red;
+    }
+
+    .green {
+        color: green;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+
+    .breaking-news {
+        margin-top: 10px;
+    }
+
+    .news-scroll {
+        font-size: 18px;
+    }
+
+    .name-scroll {
+        font-weight: bold;
+    }
+</style>
 
 {% block content %}
+<div class="container">
+    <h1>Live Stock Tracker</h1>
+    <div class="mt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center breaking-news">
+                    <div
+                        class="d-flex flex-row flex-grow-1 flex-fill justify-content-center bg-danger py-2 text-white px-1 news">
+                        <span class="d-flex align-items-center">Selected Stocks</span>
+                    </div>
+                    <marquee class="news-scroll" behavior="scroll" direction="left">
+                        <h4 class="name-scroll">{{ selected_stocks }}</h4>
+                    </marquee>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="table-container">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">SNo.</th>
+                    <th scope="col">Stock</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Previous Close</th>
+                    <th scope="col">Open</th>
+                    <th scope="col">Change</th>
+                    <th scope="col">Market Cap</th>
+                    <th scope="col">Volume</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock, stock_data in data.items %}
+                <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>{{ stock }}</td>
+                    <td id="{{ stock }}_price">{{ stock_data.price|floatformat:4 }}</td>
+                    <td id="{{ stock }}_prevprice">{{ stock_data.prev_close|floatformat:4 }}</td>
+                    <td id="{{ stock }}_open">{{ stock_data.open }}</td>
+                    <td id="{{ stock }}_change" class="{{ stock_data.change_class }}">
+                        {{ stock_data.change|floatformat:4 }}
+                    </td>
+                    <td id="{{ stock }}_cap">{{ stock_data.market_cap }}</td>
+                    <td id="{{ stock }}_vol">{{ stock_data.volume }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <br>
+    <div style="display:flex">
+        <div class="gap-2 me-2">
+            <a class="btn btn-primary" href="/" role="button">Home</a>
+        </div>
+        <div class="gap-2">
+            <a class="btn btn-danger" href="/" role="button">Reset</a>
+        </div>
+    </div>
+</div>
+</div>
+{{ room_name|json_script:"room-name" }}
+<script>
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    var queryString = window.location.search;
+    queryString = queryString.substring(1);
+    console.log(queryString);
+    const stockSocket = new WebSocket(
+        'ws://' +
+        window.location.host +
+        '/ws/stock/' +
+        roomName +
+        '/' +
+        '?' +
+        queryString
+    );
 
-<h1>Stock Data...</h1>
+    stockSocket.onmessage = function (e) {
+        console.log(e.data);
+        const data = JSON.parse(e.data);
+        console.log(data);
+        for (const [key, value] of Object.entries(data)) {
+            var price = Number((value['Quote Price']).toFixed(4));
+            var prevprice = Number((value['Previous Close']).toFixed(4));
+            document.getElementById(key + '_price').innerHTML = price;
+            document.getElementById(key + '_prevprice').innerHTML = prevprice;
+            document.getElementById(key + '_open').innerHTML = value['Open'];
+            document.getElementById(key + '_cap').innerHTML = value['Market Cap'];
+            document.getElementById(key + '_vol').innerHTML = value['Volume'];
+            var change = document.getElementById(key + '_price').innerHTML - document.getElementById(key + '_prevprice')
+                .innerHTML;
+            change = Number((change).toFixed(4));
+            if (change > 0) {
+                document.getElementById(key + '_change').className = "green";
+                document.getElementById(key + '_change').innerHTML = "+" + change;
+            } else if (change < 0) {
+                document.getElementById(key + '_change').className = "red";
+                document.getElementById(key + '_change').innerHTML = change;
+            }
+        }
+    };
+</script>
+{% endblock %}
 
-{% if stock_symbols %}
-<h1>Here is the Data</h1>
-
-{% for data in stock_symbols %}
-<h5>
-    Symbol: {{ data.symbol }}
-
-    <p>Currency: {{ data.currency }}</p>
-    <p>Description: {{ data.description }}</p>
-    <p>Type: {{ data.type }}</p>
-    <p>Current Price: ${{ data.c }}</p>
-    <p>High Price (Today): ${{ data.h }}</p>
-    <p>Low Price (Today): ${{ data.l }}</p>
-    <p>Change (Down %): {{ data.dp }}%</p>
-    <p>Previous Close: ${{ data.pc }}</p>
-    <hr>
-</h5>
-{% endfor %}
-
-{% else %}
-<h1>There is no data</h1>
-{% endif %}
-
+{% block js %}
+<script>
+</script>
 {% endblock %}

@@ -1,7 +1,7 @@
 import os
 from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter # type: ignore
+from channels.auth import AuthMiddlewareStack # type: ignore
 import live_stock_app.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stock_notifier.settings')

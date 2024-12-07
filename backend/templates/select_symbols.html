@@ -1,42 +1,23 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="container my-5">
-    <h2 class="text-center mb-4">Select Stock Symbols</h2>
-    <form method="post">
+<div class="container">
+    <h1>Live Stock Tracker</h1>
+    <p>Select your favourite stocks.</p>
+    <form action="/stock_data">
         {% csrf_token %}
-        <div class="form-group">
-            <label for="stockSymbols" class="form-label">Available Stock Symbols:</label>
-            <select class="form-select" id="stockSymbols" name="stock_symbols" multiple data-live-search="true">
-                {% if stock_symbols %}
-                {% for symbol in stock_symbols %}
-                <option value="{{ symbol.symbol }}">{{ symbol.description }}</option>
-                {% endfor %}
-                {% else %}
-                <option disabled>No symbols available</option>
-                {% endif %}
-            </select>
-        </div>
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary">Submit</button>
+        <label for="stockpicker">Select Stocks:</label>
+        <select class="form-select form-select-lg mb-3" multiple aria-label="multiple select example"
+            name="stockpicker">
+            {% for i in stockpicker %}
+            <option value="{{i}}">{{i}}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <div class="d-grid gap-2">
+            <input class="btn btn-primary" type="submit" value="Submit">
         </div>
     </form>
-
-    {% if error %}
-    <div class="alert alert-danger mt-4 text-center">
-        {{ error }}
-    </div>
-    {% endif %}
 </div>
-
-<script>
-    $(document).ready(function () {
-        $('#stockSymbols').selectpicker({
-            liveSearch: true,
-            style: 'btn-light',
-            size: 5 // Number of items displayed before scrolling
-        });
-    });
-</script>
 
 {% endblock %}

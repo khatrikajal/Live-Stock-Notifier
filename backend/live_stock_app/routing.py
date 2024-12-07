@@ -1,6 +1,10 @@
 from django.urls import path
-from . import consumers
+from channels.routing import ProtocolTypeRouter, URLRouter # type: ignore
+from consumers import StockConsumer # type: ignore
 
-websocket_urlpatterns = [
-    path('ws/stock-notifier/', consumers.StockNotifierConsumer.as_asgi()),
-]
+application = ProtocolTypeRouter({
+    # WebSocket handler
+    "websocket": URLRouter([
+        path("ws/stock/<str:room_name>/", StockConsumer.as_asgi()),
+    ])
+})

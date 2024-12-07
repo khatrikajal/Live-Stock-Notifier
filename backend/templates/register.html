@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid"
+    style="background: linear-gradient(135deg, #ff9a9e, #fad0c4); min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-6 p-5 bg-white rounded shadow-lg">
+            <h2 class="text-center mb-4 text-dark"><i class="fas fa-user-plus"></i> Register</h2>
+            <form method="POST" action="{% url 'register' %}">
+                {% csrf_token %}
+
+                <!-- Username field -->
+                <div class="form-group mb-4">
+                    <label for="username" class="text-success"><i class="fas fa-user"></i> Username:</label>
+                    <input type="text" class="form-control border border-success shadow-sm" id="username"
+                        name="username" placeholder="Choose a username" required>
+
+                </div>
+
+                <!-- Email field -->
+                <div class="form-group mb-4">
+                    <label for="email" class="text-success"><i class="fas fa-envelope"></i> Email:</label>
+                    <input type="email" class="form-control border border-success shadow-sm" id="email" name="email"
+                        placeholder="Enter your email" required>
+
+                </div>
+
+                <!-- Password field -->
+                <div class="form-group mb-4">
+                    <label for="password" class="text-success"><i class="fas fa-lock"></i> Password:</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control border border-success shadow-sm" id="password"
+                            name="password1" placeholder="Create a password" required>
+
+                    </div>
+
+                </div>
+
+                <!-- Confirm Password field -->
+                <div class="form-group mb-4">
+                    <label for="password2" class="text-success"><i class="fas fa-lock"></i> Confirm Password:</label>
+                    <input type="password" class="form-control border border-success shadow-sm" id="password2"
+                        name="password2" placeholder="Confirm your password" required>
+
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-block shadow-sm">
+                        <i class="fas fa-check-circle"></i> Register
+                    </button>
+                </div>
+            </form>
+
+            <p class="text-center mt-4 text-secondary">Already have an account? <a href="{% url 'user_login' %}"
+                    class="text-success font-weight-bold">Login</a></p>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
