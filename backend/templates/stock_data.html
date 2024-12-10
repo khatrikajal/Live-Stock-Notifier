@@ -1,138 +1,86 @@
 {% extends 'base.html' %}
 
-<style>
-    .red {
-        color: red;
-    }
-
-    .green {
-        color: green;
-    }
-
-    .table-container {
-        overflow-x: auto;
-        margin-top: 20px;
-    }
-
-    .breaking-news {
-        margin-top: 10px;
-    }
-
-    .news-scroll {
-        font-size: 18px;
-    }
-
-    .name-scroll {
-        font-weight: bold;
-    }
-</style>
-
 {% block content %}
 <div class="container">
-    <h1>Live Stock Tracker</h1>
-    <div class="mt-5">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="d-flex justify-content-between align-items-center breaking-news">
-                    <div
-                        class="d-flex flex-row flex-grow-1 flex-fill justify-content-center bg-danger py-2 text-white px-1 news">
-                        <span class="d-flex align-items-center">Selected Stocks</span>
-                    </div>
-                    <marquee class="news-scroll" behavior="scroll" direction="left">
-                        <h4 class="name-scroll">{{ selected_stocks }}</h4>
-                    </marquee>
-                </div>
-            </div>
-        </div>
-    </div>
-    <br>
-    <div class="table-container">
-        <table class="table table-striped">
-            <thead>
+    <h2 class="my-4">Tracked Stock Data</h2>
+
+    {% if selected_stocks and selected_stocks != "No stocks selected." %}
+    <p class="mb-4"><strong>Selected Stocks:</strong> {{ selected_stocks }}</p>
+    {% else %}
+    <div class="alert alert-info">No stocks selected. Please select stocks to track.</div>
+    {% endif %}
+
+    {% if data %}
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
                 <tr>
-                    <th scope="col">SNo.</th>
-                    <th scope="col">Stock</th>
+                    <th scope="col">Stock Symbol</th>
                     <th scope="col">Price</th>
-                    <th scope="col">Previous Close</th>
-                    <th scope="col">Open</th>
                     <th scope="col">Change</th>
-                    <th scope="col">Market Cap</th>
-                    <th scope="col">Volume</th>
+                    <th scope="col">High</th>
+                    <th scope="col">Low</th>
+                    <th scope="col">Down %</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for stock, stock_data in data.items %}
+                {% for stock, info in data.items %}
                 <tr>
-                    <th scope="row">{{ forloop.counter }}</th>
                     <td>{{ stock }}</td>
-                    <td id="{{ stock }}_price">{{ stock_data.price|floatformat:4 }}</td>
-                    <td id="{{ stock }}_prevprice">{{ stock_data.prev_close|floatformat:4 }}</td>
-                    <td id="{{ stock }}_open">{{ stock_data.open }}</td>
-                    <td id="{{ stock }}_change" class="{{ stock_data.change_class }}">
-                        {{ stock_data.change|floatformat:4 }}
+                    {% if info.error %}
+                    <td colspan="6" class="text-danger">{{ info.error }}</td>
+                    {% else %}
+                    <td>${{ info.price }}</td>
+                    <td class="{{ info.change_class }}">{{ info.change }}</td>
+                    <td>${{ info.high }}</td>
+                    <td>${{ info.low }}</td>
+                    <td>{{ info.down_percentage }}%</td>
+                    <td>
+                        <span
+                            class="badge {% if info.change_class == 'text-success' %}badge-success{% elif info.change_class == 'text-danger' %}badge-danger{% else %}badge-secondary{% endif %}">
+                            {{ info.change_class|title }}
+                        </span>
                     </td>
-                    <td id="{{ stock }}_cap">{{ stock_data.market_cap }}</td>
-                    <td id="{{ stock }}_vol">{{ stock_data.volume }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <br>
-    <div style="display:flex">
-        <div class="gap-2 me-2">
-            <a class="btn btn-primary" href="/" role="button">Home</a>
-        </div>
-        <div class="gap-2">
-            <a class="btn btn-danger" href="/" role="button">Reset</a>
-        </div>
-    </div>
+    {% else %}
+    <div class="alert alert-warning">No data available for the selected stocks.</div>
+    {% endif %}
 </div>
-</div>
-{{ room_name|json_script:"room-name" }}
-<script>
-    const roomName = JSON.parse(document.getElementById('room-name').textContent);
-    var queryString = window.location.search;
-    queryString = queryString.substring(1);
-    console.log(queryString);
-    const stockSocket = new WebSocket(
-        'ws://' +
-        window.location.host +
-        '/ws/stock/' +
-        roomName +
-        '/' +
-        '?' +
-        queryString
-    );
 
-    stockSocket.onmessage = function (e) {
-        console.log(e.data);
+<!-- WebSocket connection for real-time stock updates -->
+<script>
+    const userId = "{{ request.user.id }}"; // Get the logged-in user's ID
+    const socket = new WebSocket('ws://' + window.location.host + '/ws/stock/' + userId + '/');
+
+    socket.onmessage = function (e) {
         const data = JSON.parse(e.data);
-        console.log(data);
-        for (const [key, value] of Object.entries(data)) {
-            var price = Number((value['Quote Price']).toFixed(4));
-            var prevprice = Number((value['Previous Close']).toFixed(4));
-            document.getElementById(key + '_price').innerHTML = price;
-            document.getElementById(key + '_prevprice').innerHTML = prevprice;
-            document.getElementById(key + '_open').innerHTML = value['Open'];
-            document.getElementById(key + '_cap').innerHTML = value['Market Cap'];
-            document.getElementById(key + '_vol').innerHTML = value['Volume'];
-            var change = document.getElementById(key + '_price').innerHTML - document.getElementById(key + '_prevprice')
-                .innerHTML;
-            change = Number((change).toFixed(4));
-            if (change > 0) {
-                document.getElementById(key + '_change').className = "green";
-                document.getElementById(key + '_change').innerHTML = "+" + change;
-            } else if (change < 0) {
-                document.getElementById(key + '_change').className = "red";
-                document.getElementById(key + '_change').innerHTML = change;
-            }
-        }
-    };
-</script>
-{% endblock %}
 
-{% block js %}
-<script>
+        // Update stock data on the page with new values
+        Object.keys(data).forEach(stock => {
+            const stockRow = document.querySelector(`[data-stock="${stock}"]`);
+            if (stockRow) {
+                // Update stock row with new values
+                stockRow.querySelector('.stock-price').textContent = `$${data[stock].price}`;
+                stockRow.querySelector('.stock-change').textContent = data[stock].change;
+                stockRow.querySelector('.stock-high').textContent = `$${data[stock].high}`;
+                stockRow.querySelector('.stock-low').textContent = `$${data[stock].low}`;
+                stockRow.querySelector('.stock-down-percentage').textContent = `${data[stock].down_percentage}%`;
+
+                // Update change class
+                const changeClass = data[stock].change > 0 ? 'text-success' : (data[stock].change < 0 ? 'text-danger' : 'text-secondary');
+                stockRow.querySelector('.stock-change').className = changeClass;
+            }
+        });
+    };
+
+    socket.onclose = function (e) {
+        console.error('Socket closed unexpectedly');
+    };
 </script>
 {% endblock %}

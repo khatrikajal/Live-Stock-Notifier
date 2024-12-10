@@ -1,96 +1,61 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer # type: ignore
-from urllib.parse import parse_qs
-from asgiref.sync import sync_to_async
-from django_celery_beat.models import PeriodicTask, IntervalSchedule # type: ignore
-from finnhub import Client as FinnhubClient # type: ignore
-from django.conf import settings
 from .models import StockDetail
 
 
 class StockConsumer(AsyncWebsocketConsumer):
-    finnhub_client = FinnhubClient(api_key=settings.FINNHUB_API_KEY)
+    async def connect(self):
+        self.user = self.scope['user']
+        if self.user.is_authenticated:
+            self.room_group_name = f"stock_{self.user.id}"
 
-    @sync_to_async
-    def add_to_celery_beat(self, stockpicker):
-        task = PeriodicTask.objects.filter(name="every-10-seconds").first()
-        if task:
-            args = json.loads(task.args)[0]
-            for stock in stockpicker:
-                if stock not in args:
-                    args.append(stock)
-            task.args = json.dumps([args])
-            task.save()
-        else:
-            schedule, _ = IntervalSchedule.objects.get_or_create(every=10, period=IntervalSchedule.SECONDS)
-            PeriodicTask.objects.create(
-                interval=schedule,
-                name='every-10-seconds',
-                task="live_stock_app.tasks.update_stock",
-                args=json.dumps([stockpicker])
+            # Join user's stock update group
+            await self.channel_layer.group_add(
+                self.room_group_name,
+                self.channel_name
             )
 
-    @sync_to_async
-    def add_to_stock_detail(self, stockpicker):
-        user = self.scope["user"]
-        for stock in stockpicker:
-            stock_detail, _ = StockDetail.objects.get_or_create(stock=stock)
-            stock_detail.user.add(user)
+            await self.accept()
 
-    async def connect(self):
-        self.room_name = self.scope['url_route']['kwargs']['room_name']
-        self.room_group_name = f'stock_{self.room_name}'
-
-        # Join room group
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-
-        # Parse query_string
-        query_params = parse_qs(self.scope["query_string"].decode())
-        stockpicker = query_params.get('stockpicker', [])
-
-        # Add to celery beat and stock details
-        await self.add_to_celery_beat(stockpicker)
-        await self.add_to_stock_detail(stockpicker)
-
-        await self.accept()
-
-    @sync_to_async
-    def cleanup_user_stocks(self):
-        user = self.scope["user"]
-        user_stocks = StockDetail.objects.filter(user=user)
-        task = PeriodicTask.objects.filter(name="every-10-seconds").first()
-        args = json.loads(task.args)[0] if task else []
-
-        for stock in user_stocks:
-            stock.user.remove(user)
-            if stock.user.count() == 0:
-                args.remove(stock.stock)
-                stock.delete()
-
-        if task:
-            if not args:
-                task.delete()
-            else:
-                task.args = json.dumps([args])
-                task.save()
+            # Send initial stock data to WebSocket
+            stock_data = await self.get_stock_data()
+            await self.send_stock_data(stock_data)
+        else:
+            await self.close()
 
     async def disconnect(self, close_code):
-        await self.cleanup_user_stocks()
+        # Leave the stock update group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
 
-        # Leave room group
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+    async def receive(self, text_data):
+        # Handle messages received from WebSocket, if needed
+        pass
 
-    @sync_to_async
-    def get_user_stocks(self):
-        user = self.scope["user"]
-        return list(user.stockdetail_set.values_list('stock', flat=True))
+    async def stock_data(self, event):
+        # Send updated stock data to WebSocket
+        stock_data = event['data']
+        await self.send(text_data=json.dumps(stock_data))
 
-    async def send_stock_update(self, event):
-        message = event['message']
-        user_stocks = await self.get_user_stocks()
+    async def get_stock_data(self):
+        # Retrieve stocks associated with the user
+        stock_details = StockDetail.objects.filter(users=self.user)
+        stock_data = {}
 
-        # Filter stock data for the user
-        filtered_data = {stock: data for stock, data in message.items() if stock in user_stocks}
+        for stock in stock_details:
+            stock_data[stock.stock] = {
+                'symbol': stock.stock,
+                'price': stock.price,
+                'change': stock.change,
+                'prev_close': stock.prev_close,
+                'high': stock.high,
+                'low': stock.low
+            }
 
-        # Send filtered data to WebSocket
-        await self.send(text_data=json.dumps(filtered_data))
+        return stock_data
+
+    async def send_stock_data(self, stock_data):
+        # Send stock data to WebSocket
+        await self.send(text_data=json.dumps(stock_data))

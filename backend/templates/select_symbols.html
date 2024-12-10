@@ -1,23 +1,34 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <h1>Live Stock Tracker</h1>
-    <p>Select your favourite stocks.</p>
-    <form action="/stock_data">
-        {% csrf_token %}
-        <label for="stockpicker">Select Stocks:</label>
-        <select class="form-select form-select-lg mb-3" multiple aria-label="multiple select example"
-            name="stockpicker">
-            {% for i in stockpicker %}
-            <option value="{{i}}">{{i}}</option>
-            {% endfor %}
-        </select>
-        <br>
-        <div class="d-grid gap-2">
-            <input class="btn btn-primary" type="submit" value="Submit">
-        </div>
-    </form>
-</div>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
+<div class="container">
+    <h2 class="my-4">Select Stock Symbols</h2>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="stockpicker">Select Stocks:</label>
+            <select id="stockpicker" name="stockpicker" class="form-control" multiple>
+                {% for symbol in stock_symbols %}
+                <option value="{{ symbol.symbol }}">{{ symbol.symbol }} - {{ symbol.description }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Track Selected Stocks</button>
+    </form>
+
+    <h3 class="my-4">Your Tracked Stocks</h3>
+    <ul class="list-group">
+        {% for stock in request.user.stocks.all %}
+        <li class="list-group-item">{{ stock.stock }}</li>
+        {% endfor %}
+    </ul>
+</div>
 {% endblock %}

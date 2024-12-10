@@ -24,12 +24,12 @@ app.conf.beat_schedule = {
     'fetch_stock_periodically': {
         'task': 'live_stock_app.tasks.fetch_stock_data',  # Your task to fetch stock data
         'schedule': timedelta(seconds=10),  # Fetch stock data every 10 seconds
-        'args': ('AAPL',)  # Example stock ticker, can be a list of tickers
+        
     },
 }
 
 # Autodiscover tasks in registered apps
-app.autodiscover_tasks()
+app.autodiscover_tasks(['live_stock_app'])
 
 @app.task(bind=True)
 def debug_task(self):

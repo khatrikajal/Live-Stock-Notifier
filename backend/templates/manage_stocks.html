@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<div class="container">
+    <h2 class="my-4">Manage Stocks</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-primary">Add Stock</button>
+    </form>
+
+    {% if messages %}
+    <div class="my-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3 class="my-4">Existing Stocks</h3>
+
+    {% if stock_details %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Stock</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stock_details %}
+            <tr>
+                <td>{{ stock.stock }}</td>
+                <td>
+                    <a href="{% url 'edit_stock' stock.id %}" class="btn btn-warning">Edit</a>
+                    <a href="{% url 'delete_stock' stock.id %}" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info">No stock details available.</div>
+    {% endif %}
+</div>
+
+
+
+{% endblock %}
